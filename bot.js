@@ -1,10 +1,5 @@
 const { Telegraf } = require('telegraf')
-
 const bot = new Telegraf('BOT_TOKEN');
-
-
-
-
 
 bot.start((ctx)=>{
     console.log(ctx);
@@ -13,7 +8,6 @@ bot.start((ctx)=>{
     Merhaba, Core Node Chatbot'a hoş geldin! Seni burada görmek çok güzel!😌 Core Node ile ilgili merak ettiğin tüm soruların cevabını burada bulabilirsin!
 
     Core Node ailesinin bir üyesi misin?
-
 `;
 bot.telegram.sendMessage(ctx.chat.id,karşılama_mesaj, 
     {
@@ -50,6 +44,9 @@ bot.telegram.sendMessage(ctx.chat.id,coreNodeMembers,
                 ],
                 [
                     {text: 'Platform Adres Paylaşımı',callback_data:'coreNodePlatform'}
+                ],
+                [
+                    {text: 'Çekiliş Zamanı',callback_data:'coreNodeCekilis'}
                 ]
             ]
             
@@ -196,11 +193,101 @@ bot.telegram.sendMessage(ctx.chat.id,coreNodeSosyalMedya,
 
 // Çekiliş
 
+const ADMIN_ID = 'ADMIN_ID';
+const participants = new Set();
+let winner = null;
 
+bot.action('coreNodeCekilis',(ctx)=>{
+    //
+    try {
+                        ctx.deleteMessage();
+                    } catch (error) {
+                        console.log(error);
+                    }
+    let coreNodeCekilis = `Çekilişlere katılabilir, kazanan kişi belli olduktan sonra kazanan'ı görüntüleyebilirsiniz.
+    `;
 
+bot.telegram.sendMessage(ctx.chat.id,coreNodeCekilis, 
+        {
+            reply_markup: {
+                inline_keyboard:[
+                    [
+                        {text: '🎟️ Çekilişe Katıl',callback_data:'coreNodeJoinTheRaffle'}
+                    ],
+                    [
+                        {text: '🏆 Kazananı Göster',callback_data:'coreNodeShowTheWinner'}
+                    ],
+                    [
+                        {text: 'Bir önceki menüye dön',callback_data:'coreNodeMember'}
+                    ]
+                ]
+                
+            }
+        })
+})
+
+bot.action('coreNodeJoinTheRaffle', async (ctx) => {
+    if (winner) {
+        await ctx.answerCbQuery('The raffle has ended. Please wait for the next raffle.');
+        return;
+      }
+
+    const username = ctx.from.username || ctx.from.id;
+
+    if (participants.has(username)) {
+        await ctx.answerCbQuery('You have already joined the raffle.');
+        return;
+      }
+
+    participants.add(username);
+    await ctx.answerCbQuery('Başarılı bir şekilde çekilişe katıldın!');
+  });
+
+  bot.action('coreNodeShowTheWinner', async (ctx) => {
+    if (!winner) {
+      await ctx.answerCbQuery('Çekiliş sonucu henüz açıklanmadı');
+      return;
+    }
+  
+    await ctx.answerCbQuery();
+    await ctx.reply(`🎉 *Kazanan kişi:* ${winner} 🎉`);
+  });
+
+  bot.command('cekilis', async (ctx) => {
+    if (ctx.from.id.toString() !== ADMIN_ID) {
+      await ctx.reply('You are not authorized to pick a winner.');
+      return;
+    }
+  
+    if (participants.size === 0) {
+      await ctx.reply('There are no participants in the raffle.');
+      return;
+    }
+  
+    const participantsArray = Array.from(participants);
+    const winnerIndex = Math.floor(Math.random() * participantsArray.length);
+    winner = participantsArray[winnerIndex];
+  
+    await ctx.reply(`🎉 *The winner is:* ${winner} 🎉`);
+  });
+
+  bot.command('reset_raffle', async (ctx) => {
+    if (ctx.from.id.toString() !== ADMIN_ID) {
+      await ctx.reply('You are not authorized to reset the raffle.');
+      return;
+    }
+  
+    winner = null;
+    participants.clear();
+  
+    await ctx.reply('The raffle has been reset. You can now start a new raffle.');
+  });
 
 
 
 
 
 bot.launch();
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
