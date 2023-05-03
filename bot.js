@@ -228,14 +228,14 @@ bot.telegram.sendMessage(ctx.chat.id,coreNodeCekilis,
 
 bot.action('coreNodeJoinTheRaffle', async (ctx) => {
     if (winner) {
-        await ctx.answerCbQuery('The raffle has ended. Please wait for the next raffle.');
+        await ctx.answerCbQuery('Yeni çekiliş henüz başlamadı.');
         return;
       }
 
     const username = ctx.from.username || ctx.from.id;
 
     if (participants.has(username)) {
-        await ctx.answerCbQuery('You have already joined the raffle.');
+        await ctx.answerCbQuery('Bu çekilişe zaten bir kez katıldın.');
         return;
       }
 
