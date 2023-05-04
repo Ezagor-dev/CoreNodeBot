@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf')
 const bot = new Telegraf('BOT_TOKEN');
+const winners = [];
 
 bot.start((ctx)=>{
     console.log(ctx);
@@ -228,30 +229,42 @@ bot.telegram.sendMessage(ctx.chat.id,coreNodeCekilis,
 
 bot.action('coreNodeJoinTheRaffle', async (ctx) => {
     if (winner) {
-        await ctx.answerCbQuery('Yeni çekiliş henüz başlamadı.');
+        await ctx.answerCbQuery('Kazanan belli oldu. Bir sonraki çekiliş yakında başlayacak.');
         return;
       }
 
+    const allowedUsernames = [ 'USERNAME'];
     const username = ctx.from.username || ctx.from.id;
 
+    if (!allowedUsernames.includes(username)) {
+        await ctx.answerCbQuery('Telegram grubumuzda yeterli aktifliğe sahip olarak bir sonraki çekilişe katılabilirsin!');
+        return;
+      }
+
     if (participants.has(username)) {
-        await ctx.answerCbQuery('Bu çekilişe zaten bir kez katıldın.');
+        await ctx.answerCbQuery('Mevcut çekilişe daha önceden katıldınız. Lütfen çekilişin bitmesini bekleyin.');
         return;
       }
 
     participants.add(username);
     await ctx.answerCbQuery('Başarılı bir şekilde çekilişe katıldın!');
+    console.log(username);
   });
 
+  //ShowTheWinner button - Kazananı Gör
+
   bot.action('coreNodeShowTheWinner', async (ctx) => {
-    if (!winner) {
-      await ctx.answerCbQuery('Çekiliş sonucu henüz açıklanmadı');
-      return;
-    }
+
+    if (winners.length === 0) {
+        await ctx.answerCbQuery('Çekiliş sonucu henüz açıklanmadı');
+        return;
+      }
   
     await ctx.answerCbQuery();
-    await ctx.reply(`🎉 *Kazanan kişi:* ${winner} 🎉`);
+    await ctx.reply(`🎉 *Kazanan Kişiler:* \n${winners.map((winner, index) => `${index + 1}. ${winner}`).join('\n')} 🎉`);
   });
+
+  //Admin çekiliş komutu
 
   bot.command('cekilis', async (ctx) => {
     if (ctx.from.id.toString() !== ADMIN_ID) {
@@ -263,13 +276,35 @@ bot.action('coreNodeJoinTheRaffle', async (ctx) => {
       await ctx.reply('There are no participants in the raffle.');
       return;
     }
-  
+    if (participants.size < 5) {
+        await ctx.reply('There are not enough participants in the raffle to pick 5 winners.');
+        return;
+      }
+
+    console.log(participants);
     const participantsArray = Array.from(participants);
-    const winnerIndex = Math.floor(Math.random() * participantsArray.length);
-    winner = participantsArray[winnerIndex];
+    
+    console.log(participantsArray);
+    console.log(winners);
+    // const winnerIndex = Math.floor(Math.random() * participantsArray.length);
+    // console.log(winnerIndex);
+    // winner = participantsArray[winnerIndex];
+    // console.log(winner);
+   
+    for (let i = 0; i < 5; i++) {
+        const winnerIndex = Math.floor(Math.random() * participantsArray.length);
+        const winner = participantsArray[winnerIndex];
+        console.log(winner);
+        winners.push(winner);
+        console.log(participantsArray);
+        participantsArray.splice(winnerIndex, 1); // Remove the winner from the array
+        console.log(participantsArray);
+      }
   
-    await ctx.reply(`🎉 *The winner is:* ${winner} 🎉`);
+    await ctx.reply(`🎉 *The winners are:* \n${winners.map((winner, index) => `${index + 1}. ${winner}`).join('\n')} 🎉`);
   });
+
+  //Admin çekiliş resetleme komutu
 
   bot.command('reset_raffle', async (ctx) => {
     if (ctx.from.id.toString() !== ADMIN_ID) {
@@ -277,7 +312,7 @@ bot.action('coreNodeJoinTheRaffle', async (ctx) => {
       return;
     }
   
-    winner = null;
+    winners.length = 0;
     participants.clear();
   
     await ctx.reply('The raffle has been reset. You can now start a new raffle.');
